@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+
+import "./MyToken.sol";
+
+
+contract TokenSale {
+MyToken public token;
+address public owner;
+uint256 public priceWeiPerToken; // price in wei per whole token (not adjusted for decimals calculation)
+
+
+event Bought(address indexed buyer, uint256 amountTokens, uint256 paidWei);
+
+
+constructor(address _token, uint256 _priceWeiPerToken) {
+token = MyToken(_token);
+owner = msg.sender;
+priceWeiPerToken = _priceWeiPerToken;
+}
+
+
+receive() external payable {
+buy();
+}
+
+
+function buy() public payable {
+require(msg.value > 0, "send ETH");
+// compute number of whole tokens: buyer gets (msg.value / priceWeiPerToken) * (10 ** decimals)
+uint256 decimals = uint256(token.decimals());
+uint256 tokens = (msg.value * (10 ** decimals)) / priceWeiPerToken;
+require(tokens > 0, "value too low");
+token.mint(msg.sender, tokens);
+emit Bought(msg.sender, tokens, msg.value);
+}
+
+
+function withdraw() external {
+require(msg.sender == owner, "only owner");
+payable(owner).transfer(address(this).balance);
+}
+}
